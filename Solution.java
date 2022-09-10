@@ -1,3 +1,5 @@
+package projectspack;
+
 import java.io.*;
 import java.util.*;
 import java.util.List;
@@ -11,11 +13,12 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.awt.geom.AffineTransform;
+import javax.swing.border.Border;
 
 
 
 
-public class Solution extends JPanel implements ActionListener, MouseWheelListener, MouseListener,MouseMotionListener, KeyListener {
+public class Solution extends JPanel implements ActionListener, MouseWheelListener, MouseListener,MouseMotionListener, KeyListener, Border {
 
 
 	/**
@@ -39,10 +42,11 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 
 
 	};
-	String storedFunction ="";
-	ArrayList<point> storedData = new ArrayList<point>();
 	String[] verSpecial= {//Very special functions that skip a bunch
 			"plusminus",
+			"sin",
+			"cos",
+			"tan",
 			"floor",
 			"sum"
 
@@ -56,7 +60,15 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 	public String equation = new String();;
 	public JLabel equationLabel;
 	public JTextField graphFunctionBox;
+	public JTextField graphFunctionBox1;
+	public JTextField graphFunctionBox2;
+	public JButton zoomInButton;
+	public JButton zoomOutButton;
 	public JButton submitButton;
+	public int jslotcounter = 0;
+	JTextField[]textlist = new JTextField[100];
+	public JButton calcButton;
+	public JPanel menu;
 	private JFrame graph;
 	private Point mouse;
 	private double targetZoom ;
@@ -65,28 +77,39 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 	private Timer time = new Timer(10,this);
 	public Solution(){
 
-		Equation test = new Equation("3/4*0" , 0);
-
-		for(Map.Entry<Double, Boolean> entry : test.value.entrySet()) {
-			System.out.println(entry);
-		}
-		//System.exit(ABORT);;
+		 menu = new JPanel();
 		JPanel UI = new JPanel();
-		UI.setBounds(0,0,400,150);
+		UI.setBounds(0,0,400,150);;
 		graph = new JFrame();
 		graph.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+		calcButton = new JButton(new ImageIcon("C:/Users/ammer/Downloads/calculator.png"));
+		zoomInButton = new JButton("+");
+		 zoomInButton.setForeground(Color.BLUE);
+		 zoomOutButton = new JButton("_");
+		 zoomOutButton.setForeground(Color.RED);
+		calcButton.setSize(getMaximumSize());
+		
 
 		setFocusable(true);
 		setBounds(0, 20, 400, 200);
 		graphFunctionBox = new JTextField(30);
+		graphFunctionBox1 = new JTextField(30);
+		graphFunctionBox2 = new JTextField(30);
 		equationLabel = new JLabel("Enter the equation within this box");
-		UI.add(equationLabel);
-		UI.add(graphFunctionBox);
 		graph.addMouseWheelListener(this);
 		graph.setTitle("GraphIT");
-		graph.setSize(400,300);
-		graph.setVisible(true);
-		//graph.setLayout((LayoutManager) new FlowLayout());
+		graph.setSize(300,300);
+		menu.setLayout((LayoutManager) new BoxLayout(menu,BoxLayout.Y_AXIS));
+		zoomInButton.setAlignmentX(LEFT_ALIGNMENT);
+		zoomOutButton.setAlignmentX(LEFT_ALIGNMENT);
+		menu.add(calcButton);
+		menu.add(equationLabel);
+		menu.add(zoomInButton);
+		menu.add(zoomOutButton);
+		menu.add(graphFunctionBox);
+		menu.add(graphFunctionBox1);
+		menu.add(graphFunctionBox2);
+		add(menu);
 		graph.add(this);
 		this.add(UI);
 		repaint();
@@ -96,11 +119,18 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 		addMouseWheelListener(this);
 		addKeyListener(this);
 		grabFocus();
+		calcButton.addActionListener(this);
+		zoomInButton.addActionListener(this);
+		zoomOutButton.addActionListener(this);
+		graph.setVisible(true);
 		setFocusable(true);
 		time.start();
 	}
 	public void paintComponent(Graphics g){
-		this.setBounds(400,7,graph.getWidth()-400, graph.getHeight()-40);
+		zoomOutButton.setSize(50,30);
+		zoomInButton.setSize(50,30);
+		menu.setBounds(-350,0,700,graph.getHeight());
+		this.setBounds(350,7,graph.getWidth()-350, graph.getHeight()-40);
 		zoomFactor =lerp(zoomFactor ,targetZoom , 0.3 );
 		if(targetZoom> zoomFactor) {
 
@@ -161,6 +191,8 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 			}
 
 			drawFunction(g,graphFunctionBox.getText().trim() ,Color.red);
+			drawFunction(g,graphFunctionBox1.getText().trim() ,Color.green);
+			drawFunction(g,graphFunctionBox2.getText().trim() ,Color.blue);
 
 		}catch(Exception e ){
 			e.printStackTrace();
@@ -171,154 +203,63 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 	public void drawFunction(Graphics g , String function, Color color) {
 		function = function.trim();
 		if(function.length() == 0) return;
-		int commas = 0;
-		int com = 0;
+
 		int brack = 0;
-		int start =0;
 		if(function.charAt(0) == '(')
-			for(int i =0 ; i < function.length();i++) {
-				if( i == -1) {
-					break;
-				}
-				if(function.charAt(i) == '(') {
-					if(brack ==0) {
-						start=i;
-					}
-					brack++;
-				}if(function.charAt(i) == ')') {
-					brack--;
-				}
-				if(brack == 1 &&function.charAt(i)  == ',' ) {
-					commas++;
-					com =i;
-
-				}
-				if(brack ==0 && commas==1) {
-					if(function.indexOf("{" ) != -1) {
-						try {
-							drawPoints((Graphics2D) g , function.substring(start +1 , com) , function.substring(com+1,i) , Double.parseDouble(function.substring(function.indexOf("{",i )+1 , function.indexOf(",",i ) )   ) , Double.parseDouble(function.substring(  function.indexOf(",",i )+1 ,function.indexOf("}",i ))    ) , 0.01 );
-						}catch(Exception e) {
-							drawPoints((Graphics2D) g , function.substring(start +1 , com) , function.substring(com+1,i) , 0 , 1 , 0.2 );
-						}
-					}else {
-						drawPoints((Graphics2D) g , function.substring(start +1 , com) , function.substring(com+1,i) , 0 , 1 , 0.2 );
-
-					}
-
-					break;
-				}
+		for(int i =0 ; i < function.length();i++) {
+			if( i == -1) {
+				break;
 			}
+			if(function.charAt(i) == '(') {
+				brack++;
+			}if(function.charAt(i) == ')') {
+				brack--;
+			}
+			if(brack == 1 &&function.charAt(i)  == ',' ) {
+				
+				
+			}
+			if(brack ==0 ) {
+				System.out.println("Is point" +function.substring(1, function.length()-1));
+				
+				
+				break;
+			}
+		}
 		Color initColor = g.getColor();
 		g.setColor(color);
-
+		
 		functionDraw(g, function );	
-
-
-
-
+		
+		
+		
+		
 		g.setColor(initColor);
 
 	}
-	private class point{
+	
+	public void drawPoints(String functionA, String functionB , double start , double end , double inc) {
 		double x,y;
-		public point(double tx , double ty) {
-			x= tx ;
-			y= ty;
-		}
-	}
-
-	public void drawPoints(Graphics2D g2,String functionA, String functionB , double start , double end , double inc) {
-
-		g2.setStroke(new  BasicStroke(2));
-		functionA.replaceAll("t","x");
-		functionB.replaceAll("t","x");
-		if(storedFunction.equals(functionA +";"+functionB+ ";"+start+";"+end+ ";"+inc)) {
-			for(int i = 0 ; i < storedData.size()-1 ; i++) {
-				point p1 =storedData.get(i);
-				point p2 =storedData.get(i+1);
-				double x1 =xToScreen(p1.x);
-				double x =xToScreen(p2.x);
-				double y1 =yToScreen(p1.y);
-				double y =yToScreen(p2.y);				
-				if( p1.x /p2.x < 0 && Math.abs(x1-x) > this.getWidth()){ // if signs changes ie -1 to 1
-
-					g2.drawOval((int)x1-2, (int)y1-2, 4, 4);
-				}else if( p1.y /p2.y < 0 && Math.abs(y1-y) > this.getHeight()){ // if signs changes ie -1 to 1
-
-					g2.drawOval((int)x1-2, (int)y1-2, 4, 4);
-				}else
-
-					g2.drawLine((int)x1,(int) y1,(int) x, (int)y);
-			}
-			return;
-		}
-		storedFunction = functionA +";"+functionB+ ";"+start+";"+end+ ";"+inc;
-		storedData.clear();
-		double x =0,y = 0;
 		Equation temp , temp1;
-		temp  = new Equation (functionA , start);
-		temp1 = new Equation (functionB , start);
-
-		boolean answer = false;
-		for(Map.Entry<Double, Boolean> entryA : temp.value.entrySet()) {
-
-			for(Map.Entry<Double, Boolean> entryB : temp1.value.entrySet()) {
-
-				y =((int)(this.getHeight() - entryB.getKey()*zoomFactor + (int)(yOffset*-zoomFactor)));
-				x = xToScreen(entryA.getKey());
-				g2.fillOval( (int)x-2, (int)y-2, 4, 4);
-
-
-				break;
-			}
-			break;
-		}
-		boolean locaAns= false;
+		
 		if(functionA.contains(specialfunctions[0] )||functionB.contains(specialfunctions[0] ))return;
-		for( start = start ; start < end ; start+=inc) {
+		for( start = start ; start < end ; start++) {
 			temp  = new Equation (functionA , start);
 			temp1 = new Equation (functionB , start);
-
-			locaAns=false;
 			for(Map.Entry<Double, Boolean> entryA : temp.value.entrySet()) {
 
 				for(Map.Entry<Double, Boolean> entryB : temp1.value.entrySet()) {
-
-					double y1 =yToScreen( entryB.getKey());
-					double x1 = xToScreen(entryA.getKey());
-					storedData.add(new point(entryA.getKey(),entryB.getKey()));
-					if(answer) {
-
-						if( Math.abs(x1 -x) > this.getWidth()){ // if signs changes ie -1 to 1
-
-							g2.drawOval((int)x1-2, (int)y1-2, 4, 4);
-						}else if( Math.abs(y1 -y) > this.getHeight()){ // if signs changes ie -1 to 1
-
-							g2.drawOval((int)x1-2, (int)y1-2, 4, 4);
-						}else
-
-							g2.drawLine((int)x1,(int) y1,(int) x, (int)y);
-					}
-					else
-						g2.drawOval((int)x1-2, (int)y1-2, 4, 4);
-
-					x= x1;
-					y=y1;
-					locaAns= true;
-
-					answer = true;
+					
+					double y1 =((int)(this.getHeight() - entryB.getKey()*zoomFactor + (int)(yOffset*-zoomFactor)));
+					
+							
+							
+							
 					break;
 				}
 				break;
 			}
-			answer =locaAns;
 		}
-	}
-	public double xToScreen(double n) {
-		return zoomFactor *( n-xOffset ) ;
-	}
-	public double yToScreen(double n) {
-		return ((int)(this.getHeight() - n*zoomFactor + (int)(yOffset*-zoomFactor)));
 	}
 	public void functionDraw(Graphics g , String function) {
 
@@ -348,23 +289,21 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 			}
 		}else if(!special ) {
 
-			g2.setStroke(new  BasicStroke(3));
 			double py=0;
-			boolean init =false;
 			for(int x = 0 ; x < this.getWidth(); x++){
 				Equation x2 =new Equation(function,round2Interval((x -xOffset*-zoomFactor   )/zoomFactor ,0.005)) ;
-
+				
 				for(Map.Entry<Double, Boolean> entry : x2.value.entrySet()) {
 					double y2 =entry.getKey();
-
-
-					double y =((int)(this.getHeight() - y2*zoomFactor + (int)(yOffset*-zoomFactor)));
-
-					if(!init) {
-						py = y;
-						init = true;
+					if(x==0) {
+						py = y2;
 					}
+					
+					
+					double y =((int)(this.getHeight() - y2*zoomFactor + (int)(yOffset*-zoomFactor)));
+					
 					if( y > -100 && y < this.getHeight()+100 ) {
+						g2.setStroke(new  BasicStroke(3));
 						g2.drawLine(x-1,  (int)py,x,(int) y);
 					}
 					py=y;
@@ -377,19 +316,19 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 			double py=0;
 			for(int x = 0 ; x < this.getWidth(); x++){
 				Equation x2 =new Equation(function,round2Interval((x -xOffset*-zoomFactor   )/zoomFactor ,0.005)) ;
-
+				
 				for(Map.Entry<Double, Boolean> entry : x2.value.entrySet()) {
 					double y2 =entry.getKey();
 					if(x==0) {
 						py = y2;
 					}
-
-
+					
+					
 					double y =((int)(this.getHeight() - y2*zoomFactor + (int)(yOffset*-zoomFactor)));
 					if(Math.abs(py-y)>5) {
 						precisedraw(g,function, (double)x, 0.4 );
 					}
-
+					
 					py=y;
 					if( y > 0 && y < this.getHeight() ) {
 
@@ -408,9 +347,9 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 			Equation x2 =new Equation(function,round2Interval((x -xOffset*-zoomFactor   )/zoomFactor ,0.005)) ;
 			for(Map.Entry<Double, Boolean> entry : x2.value.entrySet()) {
 				double y2 =entry.getKey();
-
-
-
+				
+				
+				
 				double y =((int)(this.getHeight() - y2*zoomFactor + (int)(yOffset*-zoomFactor)));
 				if( y > 0 && y < this.getHeight() ) {
 
@@ -424,10 +363,25 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 	public void actionPerformed(ActionEvent e) {
 		if(e.getSource() ==time)
 			repaint();
+		if(e.getSource()==calcButton)
+		{
+			CalcGUI s1 = new CalcGUI();
+		}
+		if(e.getSource()==zoomInButton)
+		{
+			zoom += 0.5;
+			targetZoom =500 *Math.pow(1.1,zoom);
+		}
+		if(e.getSource()==zoomOutButton)
+		{
+			zoom -= 0.5;
+			targetZoom =500 *Math.pow(1.1,zoom);
+		}
 	}
 
-	public static void main(String[]args)
+	public static void main(String[]args) throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException
 	{
+		UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
 		Solution s1 = new Solution();
 
 
@@ -488,12 +442,10 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 
 			if(xVal!= Double.NaN)
 				a= a.replaceAll("x", "("+xVal+ ")");
-
 			try {
 				sove(xVal);
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
-				//e.printStackTrace();
 			}
 		}
 		public Equation(String string,double xVal,boolean auto) {
@@ -528,9 +480,10 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 		public void addVar( String var, String val) {
 			for(int i = 0 ; i <a.length() - var.length()+1; i++) {
 				if(a.substring(i , i + var.length()).equals(var)) {
+					System.out.println(a.charAt(i -1));
 					if(i==0||isBasicOperator( a.charAt(i -1))  ||a.charAt(i -1)==')') {
 						if(i==a.length() - var.length()||isBasicOperator( a.charAt(i +var.length()))  ||a.charAt(i +var.length() )=='(') {
-
+							
 							a=a.substring(0 , i ) + (i!=0 && a.charAt(i -1)==')' ? "*":"" ) + val +(i!=a.length() - var.length() &&a.charAt(i +var.length())=='('? "*":"" )+ a.substring( i + var.length());
 						}
 					}else
@@ -696,7 +649,6 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 			/**( 2 )
 	        |
 	        V
-
 	 	1  + 1
 	  /          \
 	x+1          x+1
@@ -955,10 +907,12 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 					if(a.charAt(s) == '-'&& s==inde+1 )continue;
 					if(isBasicOperator(a.charAt(s)))break;
 				}
+
 				a = a.substring(0, e+1 )  
 						+df.format(Double.parseDouble(a.substring(e+1, inde))
 								* Double.parseDouble(a.substring(inde+1, s))) 
 						+a.substring(s);
+
 			}
 
 			while(a.contains("/")) {
@@ -1230,6 +1184,24 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 		return 0;
 
 	}
+	public void addTextField()
+	{
+		if(jslotcounter ==100)
+		{
+			return;
+		}
+		else
+		{
+			jslotcounter++;
+			textlist[jslotcounter-1] = new JTextField(30);
+			menu.add(textlist[jslotcounter-1]);
+			graph.revalidate();
+			graph.repaint();
+			
+		}
+		
+		
+	}
 	public int findGCD(double dec) {
 		dec = round2NearestInterval(dec ,0.001);
 		int scale =(int)((double)720720 /dec) ;//720720 highly composite
@@ -1257,7 +1229,9 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 	}
 	@Override
 	public void keyPressed(KeyEvent e) {
-		// TODO Auto-generated method stub
+		if(e.getKeyCode()==KeyEvent.VK_ENTER) {
+			addTextField();
+		}
 		System.out.println("e :"+e.getExtendedKeyCode());
 	}
 	@Override
@@ -1265,6 +1239,33 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 		// TODO Auto-generated method stub
 		System.out.println("e :"+e.getExtendedKeyCode());
 
+	}
+	@Override
+	public void paintBorder(Component c, Graphics g, int x, int y, int width, int height) {
+		// TODO Auto-generated method stub
+		
+	}
+	@Override
+	public Insets getBorderInsets(Component c) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+	@Override
+	public boolean isBorderOpaque() {
+		// TODO Auto-generated method stub
+		return false;
 	}  
 
 }
+
+
+
+
+
+
+
+
+
+
+
+
