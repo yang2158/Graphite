@@ -1,20 +1,21 @@
-package projectspack;
-
 import java.io.*;
 import java.util.*;
 import java.util.List;
 import java.awt.*;
 import javax.swing.*;
 import javax.swing.Timer;
+import javax.swing.border.Border;
 
 import java.awt.event.*;
 import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
+import java.awt.*;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.text.DecimalFormat;
 import java.awt.geom.AffineTransform;
-import javax.swing.border.Border;
-
+import javax.imageio.ImageIO;
 
 
 
@@ -42,11 +43,10 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 
 
 	};
+	String[] storedFunction = new String[100];
+	ArrayList<point>[] storedData = new ArrayList[100];
 	String[] verSpecial= {//Very special functions that skip a bunch
 			"plusminus",
-			"sin",
-			"cos",
-			"tan",
 			"floor",
 			"sum"
 
@@ -65,24 +65,53 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 	public JButton zoomInButton;
 	public JButton zoomOutButton;
 	public JButton submitButton;
-	public int jslotcounter = 0;
-	JTextField[]textlist = new JTextField[100];
 	public JButton calcButton;
-	public JPanel menu;
-	private JFrame graph;
+	public boolean onComponent = false;
+	public Color[] colors= {Color.BLACK, Color.red, Color.blue, Color.ORANGE, Color.magenta, Color.YELLOW, Color.LIGHT_GRAY};
+	public static Color[] colorS= {Color.BLACK, Color.red, Color.blue, Color.ORANGE, Color.magenta, Color.YELLOW, Color.LIGHT_GRAY};
+ 	public JPanel menu;
+	public JFrame graph;
+	public static Solution current;
 	private Point mouse;
 	private double targetZoom ;
 	private double xOffset, yOffset=0;
+	public TextInputUI textInput = new TextInputUI();
 	public float[] dataPoints ; // DataPoints on Screen with length of w * n   N being how precise the data is.
 	private Timer time = new Timer(10,this);
-	public Solution(){
+	public Image animation;
+		public long starttime;
 
+public long getElapsedTime()
+    {
+        return System.currentTimeMillis()-starttime;
+    }
+	public void refreshFrame() {
+		
+		graph.revalidate();
+		graph.repaint();
+	}
+	public static void refreshFrameS() {
+		
+		current.graph.revalidate();
+		current.graph.repaint();
+	}
+	public Solution(){ 
+		for(int i = 0; i < 100; i++) {
+			storedData[i]= new ArrayList<point>();
+			storedFunction[i] = "";
+		}
+		starttime = System.currentTimeMillis();
 		 menu = new JPanel();
 		JPanel UI = new JPanel();
 		UI.setBounds(0,0,400,150);;
 		graph = new JFrame();
 		graph.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-		calcButton = new JButton(new ImageIcon("C:/Users/ammer/Downloads/calculator.png"));
+		try {
+			calcButton = new JButton(new ImageIcon(new URL("https://cdn.discordapp.com/attachments/619967192384929804/1018291265512673301/calculator.png")));
+		} catch (MalformedURLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		zoomInButton = new JButton("+");
 		 zoomInButton.setForeground(Color.BLUE);
 		 zoomOutButton = new JButton("_");
@@ -90,26 +119,26 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 		calcButton.setSize(getMaximumSize());
 		
 
+try {
+            animation = ImageIO.read(new URL("https://cdn.discordapp.com/attachments/619967192384929804/1018301577578156042/graphitephoto.png"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 		setFocusable(true);
 		setBounds(0, 20, 400, 200);
 		graphFunctionBox = new JTextField(30);
 		graphFunctionBox1 = new JTextField(30);
 		graphFunctionBox2 = new JTextField(30);
-		equationLabel = new JLabel("Enter the equation within this box");
 		graph.addMouseWheelListener(this);
-		graph.setTitle("GraphIT");
+		graph.setTitle("Graphite");
 		graph.setSize(300,300);
 		menu.setLayout((LayoutManager) new BoxLayout(menu,BoxLayout.Y_AXIS));
-		zoomInButton.setAlignmentX(LEFT_ALIGNMENT);
-		zoomOutButton.setAlignmentX(LEFT_ALIGNMENT);
-		menu.add(calcButton);
-		menu.add(equationLabel);
-		menu.add(zoomInButton);
-		menu.add(zoomOutButton);
-		menu.add(graphFunctionBox);
-		menu.add(graphFunctionBox1);
-		menu.add(graphFunctionBox2);
-		add(menu);
+		add(calcButton);
+		add(zoomOutButton);
+		add(zoomInButton);
+	      Border blackline = BorderFactory.createLineBorder(Color.black);
+		textInput.setBorder(blackline);
+		graph.add(textInput);
 		graph.add(this);
 		this.add(UI);
 		repaint();
@@ -127,10 +156,16 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 		time.start();
 	}
 	public void paintComponent(Graphics g){
-		zoomOutButton.setSize(50,30);
-		zoomInButton.setSize(50,30);
-		menu.setBounds(-350,0,700,graph.getHeight());
+		if(textInput.jslotcounter==0) {
+			textInput.addTextField();
+		}
+		
+		calcButton.setBounds(this.getWidth()-90, 20 , 70,70);
+		zoomOutButton.setBounds(this.getWidth()-70, this.getHeight()-70 , 50,50);
+		zoomInButton.setBounds(this.getWidth()-140, this.getHeight()-70 , 50,50);
+		textInput.setBounds(0,0,350,graph.getHeight());
 		this.setBounds(350,7,graph.getWidth()-350, graph.getHeight()-40);
+		textInput.refreshButtonBounds();
 		zoomFactor =lerp(zoomFactor ,targetZoom , 0.3 );
 		if(targetZoom> zoomFactor) {
 
@@ -145,7 +180,19 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 		super.paintComponent(g);
 		g.setColor(Color.WHITE);
 		g.fillRect(0, 0, this.getWidth(), this.getHeight());
+		
+		if(getElapsedTime()<3000)
+		        {
 
+					textInput.setBounds(0,0,0,0);
+
+					calcButton.setBounds(0,0,0,0);
+					zoomOutButton.setBounds(0,0,0,0);
+					zoomInButton.setBounds(0,0,0,0);
+		            this.setBounds(0,0,graph.getWidth(),graph.getHeight());
+		            g.drawImage(animation,getWidth()/2-getHeight()/8*6 , getHeight()/4,getHeight()/4*6   ,getHeight()/2, null);
+		            return;
+		        }
 		if(mouse==null) {
 			mouse = new Point(0,0);
 		}
@@ -189,10 +236,9 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 			for(int i = 0 ; -scale*i *zoomFactor< this.getWidth() -zoomFactor*xOffset  ; i-= incre) {
 				g.drawString( lbf.format(scale * i) , (int)(i*scale* zoomFactor+ (int)(xOffset*-zoomFactor)) ,this.getHeight()+(int)(yOffset*-zoomFactor) +20 ) ;
 			}
-
-			drawFunction(g,graphFunctionBox.getText().trim() ,Color.red);
-			drawFunction(g,graphFunctionBox1.getText().trim() ,Color.green);
-			drawFunction(g,graphFunctionBox2.getText().trim() ,Color.blue);
+			String [] text = textInput.getText();
+			for(int i = 0 ; i < text.length; i++ )
+				drawFunction(g,text[i] ,colors[i%colors.length] , i);
 
 		}catch(Exception e ){
 			e.printStackTrace();
@@ -200,69 +246,159 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 		}
 
 	}
-	public void drawFunction(Graphics g , String function, Color color) {
+	public void drawFunction(Graphics g , String function, Color color, int id) {
 		function = function.trim();
 		if(function.length() == 0) return;
-
+		int commas = 0;
+		int com = 0;
 		int brack = 0;
+		int start =0;
 		if(function.charAt(0) == '(')
-		for(int i =0 ; i < function.length();i++) {
-			if( i == -1) {
-				break;
+			for(int i =0 ; i < function.length();i++) {
+				if( i == -1) {
+					break;
+				}
+				if(function.charAt(i) == '(') {
+					if(brack ==0) {
+						start=i;
+					}
+					brack++;
+				}if(function.charAt(i) == ')') {
+					brack--;
+				}
+				if(brack == 1 &&function.charAt(i)  == ',' ) {
+					commas++;
+					com =i;
+
+				}
+				if(brack ==0 && commas==1) {
+					if(function.indexOf("{" ) != -1) {
+						try {
+							drawPoints((Graphics2D) g , function.substring(start +1 , com) , function.substring(com+1,i) , Double.parseDouble(function.substring(function.indexOf("{",i )+1 , function.indexOf(",",i ) )   ) , Double.parseDouble(function.substring(  function.indexOf(",",i )+1 ,function.indexOf("}",i ))    ) , 0.01 ,id );
+						}catch(Exception e) {
+							drawPoints((Graphics2D) g , function.substring(start +1 , com) , function.substring(com+1,i) , 0 , 1 , 0.2 ,id);
+						}
+					}else {
+						drawPoints((Graphics2D) g , function.substring(start +1 , com) , function.substring(com+1,i) , 0 , 1 , 0.2 ,id);
+
+					}
+
+					return;
+				}
 			}
-			if(function.charAt(i) == '(') {
-				brack++;
-			}if(function.charAt(i) == ')') {
-				brack--;
-			}
-			if(brack == 1 &&function.charAt(i)  == ',' ) {
-				
-				
-			}
-			if(brack ==0 ) {
-				System.out.println("Is point" +function.substring(1, function.length()-1));
-				
-				
-				break;
-			}
-		}
 		Color initColor = g.getColor();
 		g.setColor(color);
-		
-		functionDraw(g, function );	
-		
-		
-		
-		
+
+		functionDraw(g, function , id );	
+
+
+
+
 		g.setColor(initColor);
 
 	}
-	
-	public void drawPoints(String functionA, String functionB , double start , double end , double inc) {
+	private class point{
 		double x,y;
+		public point(double tx , double ty) {
+			x= tx ;
+			y= ty;
+		}
+	}
+
+	public void drawPoints(Graphics2D g2,String functionA, String functionB , double start , double end , double inc , int id) {
+
+		g2.setStroke(new  BasicStroke(2));
+		if(storedFunction[id].equals(functionA +";"+functionB+ ";"+start+";"+end+ ";"+inc)) {
+			for(int i = 0 ; i < storedData[id].size()-1 ; i++) {
+				point p1 =storedData[id].get(i);
+				point p2 =storedData[id].get(i+1);
+				double x1 =xToScreen(p1.x);
+				double x =xToScreen(p2.x);
+				double y1 =yToScreen(p1.y);
+				double y =yToScreen(p2.y);				
+				if( p1.x /p2.x < 0 && Math.abs(x1-x) > this.getWidth()){ // if signs changes ie -1 to 1
+
+					g2.drawOval((int)x1-2, (int)y1-2, 4, 4);
+				}else if( p1.y /p2.y < 0 && Math.abs(y1-y) > this.getHeight()){ // if signs changes ie -1 to 1
+
+					g2.drawOval((int)x1-2, (int)y1-2, 4, 4);
+				}else
+
+					g2.drawLine((int)x1,(int) y1,(int) x, (int)y);
+			}
+			return;
+		}
+		storedFunction[id] = functionA +";"+functionB+ ";"+start+";"+end+ ";"+inc;
+		storedData[id].clear();
+		double x =0,y = 0;
 		Equation temp , temp1;
-		
+		temp  = new Equation (functionA , start);
+		temp1 = new Equation (functionB , start);
+
+		boolean answer = false;
+		for(Map.Entry<Double, Boolean> entryA : temp.value.entrySet()) {
+
+			for(Map.Entry<Double, Boolean> entryB : temp1.value.entrySet()) {
+
+				y =((int)(this.getHeight() - entryB.getKey()*zoomFactor + (int)(yOffset*-zoomFactor)));
+				x = xToScreen(entryA.getKey());
+				g2.fillOval( (int)x-2, (int)y-2, 4, 4);
+
+
+				break;
+			}
+			break;
+		}
+		boolean locaAns= false;
 		if(functionA.contains(specialfunctions[0] )||functionB.contains(specialfunctions[0] ))return;
-		for( start = start ; start < end ; start++) {
+		for( start = start ; start < end ; start+=inc) {
 			temp  = new Equation (functionA , start);
 			temp1 = new Equation (functionB , start);
+
+			locaAns=false;
 			for(Map.Entry<Double, Boolean> entryA : temp.value.entrySet()) {
 
 				for(Map.Entry<Double, Boolean> entryB : temp1.value.entrySet()) {
-					
-					double y1 =((int)(this.getHeight() - entryB.getKey()*zoomFactor + (int)(yOffset*-zoomFactor)));
-					
-							
-							
-							
+
+					double y1 =yToScreen( entryB.getKey());
+					double x1 = xToScreen(entryA.getKey());
+					storedData[id].add(new point(entryA.getKey(),entryB.getKey()));
+					if(answer) {
+
+						if( Math.abs(x1 -x) > this.getWidth()){ // if signs changes ie -1 to 1
+
+							g2.drawOval((int)x1-2, (int)y1-2, 4, 4);
+						}else if( Math.abs(y1 -y) > this.getHeight()){ // if signs changes ie -1 to 1
+
+							g2.drawOval((int)x1-2, (int)y1-2, 4, 4);
+						}else
+
+							g2.drawLine((int)x1,(int) y1,(int) x, (int)y);
+					}
+					else
+						g2.drawOval((int)x1-2, (int)y1-2, 4, 4);
+
+					x= x1;
+					y=y1;
+					locaAns= true;
+
+					answer = true;
 					break;
 				}
 				break;
 			}
+			answer =locaAns;
 		}
 	}
-	public void functionDraw(Graphics g , String function) {
+	public double xToScreen(double n) {
+		return zoomFactor *( n-xOffset ) ;
+	}
+	public double yToScreen(double n) {
+		return ((int)(this.getHeight() - n*zoomFactor + (int)(yOffset*-zoomFactor)));
+	}
+	public void functionDraw(Graphics g , String function , int id) {
 
+		
 		Graphics2D g2 =((Graphics2D) g);
 		boolean special = false;
 		for(int i = 0 ; i < verSpecial.length; i++) {
@@ -271,6 +407,37 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 				break;
 			}
 		}
+		if(storedFunction[id].equals(function+ ";"+xOffset+";"+zoomFactor)) {
+			
+			
+			if(function.contains("plusminus")) {
+
+
+				for(int i = 0 ; i < storedData[id].size() ; i++) {
+					point data = storedData[id].get(i);
+					g2.fillOval((int)data.x-2 , (int)data.y-2, 4, 4);
+				}
+			}else if(!special ) {
+				g2.setStroke(new  BasicStroke(3));
+				for(int i = 0 ; i < storedData[id].size()-1 ; i++) {
+					point data = storedData[id].get(i);
+					point data1 = storedData[id].get(i+1);
+					g2.drawLine((int)data.x , (int)data.y, (int)data1.x , (int)data1.y);
+				}
+			}
+			else {
+
+				for(int i = 0 ; i < storedData[id].size() ; i++) {
+					point data = storedData[id].get(i);
+					g2.fillOval((int)data.x-2 , (int)data.y-2, 4, 4);
+				}
+			}
+			
+			
+			return;
+		}
+		storedFunction[id] = function+ ";"+xOffset+";"+zoomFactor;
+		storedData[id].clear();
 		if(function.contains("plusminus")) {
 
 			for(int x = 0 ; x < this.getWidth(); x++){
@@ -282,6 +449,7 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 					if( y > 0 && y < this.getHeight() ) {
 
 						g.fillOval(x-2, (int) (y-2), 4, 4);
+						storedData[id].add(new point(x , y));
 
 					}
 				}
@@ -289,23 +457,26 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 			}
 		}else if(!special ) {
 
+			g2.setStroke(new  BasicStroke(3));
 			double py=0;
+			boolean init =false;
 			for(int x = 0 ; x < this.getWidth(); x++){
 				Equation x2 =new Equation(function,round2Interval((x -xOffset*-zoomFactor   )/zoomFactor ,0.005)) ;
-				
+
 				for(Map.Entry<Double, Boolean> entry : x2.value.entrySet()) {
 					double y2 =entry.getKey();
-					if(x==0) {
-						py = y2;
+
+
+					double y =clamp(((int)(this.getHeight() - y2*zoomFactor + (int)(yOffset*-zoomFactor))),-100 , this.getHeight()+100);
+
+					if(!init) {
+						py = y;
+						init = true;
 					}
-					
-					
-					double y =((int)(this.getHeight() - y2*zoomFactor + (int)(yOffset*-zoomFactor)));
-					
-					if( y > -100 && y < this.getHeight()+100 ) {
-						g2.setStroke(new  BasicStroke(3));
 						g2.drawLine(x-1,  (int)py,x,(int) y);
-					}
+
+						storedData[id].add(new point(x , y));
+					
 					py=y;
 					break;
 				}
@@ -316,23 +487,24 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 			double py=0;
 			for(int x = 0 ; x < this.getWidth(); x++){
 				Equation x2 =new Equation(function,round2Interval((x -xOffset*-zoomFactor   )/zoomFactor ,0.005)) ;
-				
+
 				for(Map.Entry<Double, Boolean> entry : x2.value.entrySet()) {
 					double y2 =entry.getKey();
 					if(x==0) {
 						py = y2;
 					}
-					
-					
+
+
 					double y =((int)(this.getHeight() - y2*zoomFactor + (int)(yOffset*-zoomFactor)));
 					if(Math.abs(py-y)>5) {
-						precisedraw(g,function, (double)x, 0.4 );
+						precisedraw(g,function, (double)x, 0.4 ,id);
 					}
-					
+
 					py=y;
 					if( y > 0 && y < this.getHeight() ) {
 
 						g.fillOval(x-2, (int) (y-2), 4, 4);
+						storedData[id].add(new point(x , y));
 
 					}
 					break;
@@ -341,48 +513,53 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 			}
 		}
 	}
-	public void precisedraw(Graphics g , String function, double x, double inc ) {
+	public void precisedraw(Graphics g , String function, double x, double inc ,int id ) {
 		double end = x+1;
 		for( x = x+inc ; x < end; x+=inc){
 			Equation x2 =new Equation(function,round2Interval((x -xOffset*-zoomFactor   )/zoomFactor ,0.005)) ;
 			for(Map.Entry<Double, Boolean> entry : x2.value.entrySet()) {
 				double y2 =entry.getKey();
-				
-				
-				
+
+
+
 				double y =((int)(this.getHeight() - y2*zoomFactor + (int)(yOffset*-zoomFactor)));
 				if( y > 0 && y < this.getHeight() ) {
 
 					g.fillOval((int) (x-2), (int) (y-2), 4, 4);
+					storedData[id].add(new point(x , y));
 
 				}
 			}
 
 		}
 	}
+	
+	public double clamp (double n , double min , double max) {
+		return Math.min(max, Math.max(min, n));
+	}
 	public void actionPerformed(ActionEvent e) {
 		if(e.getSource() ==time)
 			repaint();
+
+if(e.getSource()==zoomInButton)
+        {
+            zoom += 1;
+            targetZoom =500 *Math.pow(1.1,zoom);
+        }
+        if(e.getSource()==zoomOutButton)
+        {
+            zoom -= 1;
+            targetZoom =500*Math.pow(1.1,zoom);
+        }
 		if(e.getSource()==calcButton)
 		{
 			CalcGUI s1 = new CalcGUI();
 		}
-		if(e.getSource()==zoomInButton)
-		{
-			zoom += 0.5;
-			targetZoom =500 *Math.pow(1.1,zoom);
-		}
-		if(e.getSource()==zoomOutButton)
-		{
-			zoom -= 0.5;
-			targetZoom =500 *Math.pow(1.1,zoom);
-		}
 	}
 
-	public static void main(String[]args) throws ClassNotFoundException, InstantiationException, IllegalAccessException, UnsupportedLookAndFeelException
+	public static void main(String[]args)
 	{
-		UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-		Solution s1 = new Solution();
+		current = new Solution();
 
 
 	}
@@ -400,8 +577,11 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 	double zoom =0;
 	public void mouseWheelMoved(MouseWheelEvent e)
 	{
-		zoom += e.getPreciseWheelRotation();
-		targetZoom =500 *Math.pow(1.1,zoom);
+		if(onComponent) {
+			zoom += e.getPreciseWheelRotation();
+			targetZoom =500 *Math.pow(1.1,zoom);
+			
+		}
 	}
 	static String previous = " ";
 	public static double lerp(double a, double b, double f) {
@@ -442,10 +622,12 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 
 			if(xVal!= Double.NaN)
 				a= a.replaceAll("x", "("+xVal+ ")");
+
 			try {
 				sove(xVal);
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
+				//e.printStackTrace();
 			}
 		}
 		public Equation(String string,double xVal,boolean auto) {
@@ -480,10 +662,9 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 		public void addVar( String var, String val) {
 			for(int i = 0 ; i <a.length() - var.length()+1; i++) {
 				if(a.substring(i , i + var.length()).equals(var)) {
-					System.out.println(a.charAt(i -1));
 					if(i==0||isBasicOperator( a.charAt(i -1))  ||a.charAt(i -1)==')') {
 						if(i==a.length() - var.length()||isBasicOperator( a.charAt(i +var.length()))  ||a.charAt(i +var.length() )=='(') {
-							
+
 							a=a.substring(0 , i ) + (i!=0 && a.charAt(i -1)==')' ? "*":"" ) + val +(i!=a.length() - var.length() &&a.charAt(i +var.length())=='('? "*":"" )+ a.substring( i + var.length());
 						}
 					}else
@@ -649,6 +830,7 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 			/**( 2 )
 	        |
 	        V
+
 	 	1  + 1
 	  /          \
 	x+1          x+1
@@ -907,12 +1089,10 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 					if(a.charAt(s) == '-'&& s==inde+1 )continue;
 					if(isBasicOperator(a.charAt(s)))break;
 				}
-
 				a = a.substring(0, e+1 )  
 						+df.format(Double.parseDouble(a.substring(e+1, inde))
 								* Double.parseDouble(a.substring(inde+1, s))) 
 						+a.substring(s);
-
 			}
 
 			while(a.contains("/")) {
@@ -1069,19 +1249,19 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 	@Override
 	public void mouseClicked(MouseEvent e) {
 		// TODO Auto-generated method stub
-
+		onComponent= true;
 	}
 
 	@Override
 	public void mouseEntered(MouseEvent e) {
 		// TODO Auto-generated method stub
-
+		onComponent= true;
 	}
 
 	@Override
 	public void mouseExited(MouseEvent e) {
 		// TODO Auto-generated method stub
-
+		onComponent = false;
 	}
 	@Override
 	public void mouseDragged(MouseEvent e) {
@@ -1184,24 +1364,6 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 		return 0;
 
 	}
-	public void addTextField()
-	{
-		if(jslotcounter ==100)
-		{
-			return;
-		}
-		else
-		{
-			jslotcounter++;
-			textlist[jslotcounter-1] = new JTextField(30);
-			menu.add(textlist[jslotcounter-1]);
-			graph.revalidate();
-			graph.repaint();
-			
-		}
-		
-		
-	}
 	public int findGCD(double dec) {
 		dec = round2NearestInterval(dec ,0.001);
 		int scale =(int)((double)720720 /dec) ;//720720 highly composite
@@ -1229,9 +1391,6 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 	}
 	@Override
 	public void keyPressed(KeyEvent e) {
-		if(e.getKeyCode()==KeyEvent.VK_ENTER) {
-			addTextField();
-		}
 		System.out.println("e :"+e.getExtendedKeyCode());
 	}
 	@Override
@@ -1257,15 +1416,3 @@ public class Solution extends JPanel implements ActionListener, MouseWheelListen
 	}  
 
 }
-
-
-
-
-
-
-
-
-
-
-
-
